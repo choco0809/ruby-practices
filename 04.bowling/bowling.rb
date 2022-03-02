@@ -18,16 +18,17 @@ score_array_num.each_slice(2) do |s|
 end
 total_score = 0
 frames.each_with_index do |f, index|
-  total_score = if index + 1 >= 10
-                  total_score + f.sum
-                elsif f[0] == 10 && frames[index + 1][0] == 10
-                  total_score + frames[index + 1][0] + frames[index + 2][0] + 10
-                elsif f[0] == 10 && frames[index + 1][0] != 10
-                  total_score + frames[index + 1].sum + 10
-                elsif f.sum == 10
-                  total_score + frames[index + 1][0] + 10
-                else
-                  total_score + f.sum
-                end
+  total_score =
+    if index + 1 >= 10
+      total_score + f.sum
+    elsif f[0] == 10 && frames[index + 1][0] == 10
+      total_score + frames[index + 1][0] + frames[index + 2][0] + 10
+    elsif f[0] == 10 && frames[index + 1][0] != 10
+      total_score + frames[index + 1].sum + 10
+    elsif f.sum == 10
+      total_score + frames[index + 1][0] + 10
+    else
+      total_score + f.sum
+    end
 end
 puts total_score
