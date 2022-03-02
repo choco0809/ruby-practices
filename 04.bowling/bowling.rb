@@ -11,7 +11,6 @@ score_array.each do |s|
     score_array_num.push(s.to_i)
   end
 end
-p score_array_num
 frames = []
 score_array_num.each_slice(2) do |s|
   frames.push(s)
