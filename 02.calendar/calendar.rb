@@ -50,13 +50,13 @@ puts "      #{first_day.month}月 #{first_day.year}      "
 puts "日 月 火 水 木 金 土"
 calendar_arry.each_with_index do |date,index|
     if index == 0
-        print calendar.ReverseColor(date,3*first_day.next_day(index).wday+2)
+        print calendar.reverse_color(date,3*first_day.next_day(index).wday+2)
     elsif first_day.next_day(index).sunday?
-        print calendar.ReverseColor(date,2)
+        print calendar.reverse_color(date,2)
     elsif first_day.next_day(index).saturday?
-        puts calendar.ReverseColor(date,3)
+        puts calendar.reverse_color(date,3)
     else
-        print calendar.ReverseColor(date,3)
+        print calendar.reverse_color(date,3)
     end
 end
 puts
