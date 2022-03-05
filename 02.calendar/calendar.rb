@@ -16,7 +16,7 @@ class Calendar
         @month
     end
     # 現在の日付の場合、色を反転させる
-    def ReverseColor(value,space)
+    def reverse_color(value,space)
         if @year == Date.today.year && @month == Date.today.month && value == Date.today.mday
             "\e[47m\e[30m#{value}\e[0m".rjust(space + 14)
         else 
