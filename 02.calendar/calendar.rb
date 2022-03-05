@@ -4,10 +4,10 @@ require 'date'
 
 class Calendar
     def set_year(value)
-        @year = IsNumber(value) == true && value.to_s.size == 4 ? value.to_i : Date.today.year
+        @year = is_number(value) && value.to_s.size == 4 ? value.to_i : Date.today.year
     end
     def set_month(value)
-        @month = IsNumber(value) == true && value.to_s.size < 3 && value.to_i < 13 ? value.to_i : Date.today.month
+        @month = is_number(value) && value.to_s.size < 3 && value.to_i < 13 ? value.to_i : Date.today.month
     end
     def year
         @year
@@ -16,19 +16,18 @@ class Calendar
         @month
     end
     # 現在の日付の場合、色を反転させる
-    def ReverseColor(value)
-        @year == Date.today.year && @month == Date.today.month && value == Date.today.mday ? "\e[47m\e[30m#{value}\e[0m" : value
+    def ReverseColor(value,space)
+        if @year == Date.today.year && @month == Date.today.month && value == Date.today.mday
+            "\e[47m\e[30m#{value}\e[0m".rjust(space + 14)
+        else 
+            value.to_s.rjust(space)
+        end
     end
 end
 
-#1週目の位置調整のためスペースを出力する
-def AddSpaceWday(today)
-    today.wday.times{print "   "}
-end
-
 # 数値に変換できか判断
-def IsNumber(value)
-    !(value.to_s =~ /^[0-9]+$/) == false
+def is_number(value)
+    value.to_s.match?(/^[0-9]+$/)
 end
 
 #-y -m オプション指定
@@ -49,12 +48,15 @@ last_day = first_day.next_month(1).prev_day(1)
 calendar_arry = [*1..last_day.mday]
 puts "      #{first_day.month}月 #{first_day.year}      "
 puts "日 月 火 水 木 金 土"
-calendar_arry.each do |date|
-    AddSpaceWday(first_day) if date == 1
-    if first_day.next_day(date-1).saturday? == true or last_day.mday == date
-        puts date < 10 ? " #{calendar.ReverseColor(date)}" : calendar.ReverseColor(date)
+calendar_arry.each_with_index do |date,index|
+    if index == 0
+        print calendar.ReverseColor(date,3*first_day.next_day(index).wday+2)
+    elsif first_day.next_day(index).sunday?
+        print calendar.ReverseColor(date,2)
+    elsif first_day.next_day(index).saturday?
+        puts calendar.ReverseColor(date,3)
     else
-        print date < 10 ? " #{calendar.ReverseColor(date)} " : "#{calendar.ReverseColor(date)} " if last_day.mday != date
+        print calendar.ReverseColor(date,3)
     end
 end
-puts 
+puts
