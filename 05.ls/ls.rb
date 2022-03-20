@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
+require 'optparse'
+WIDTH = 3
+
 # 配列内の要素数をslice_countの個数に統一する
 def align_slice_count(array, slice_count)
   if array.size < slice_count
-    array.fill( nil,array.size,slice_count - array.size )
+    array.fill(nil, array.size, slice_count - array.size)
   else
     array
   end
@@ -14,13 +17,21 @@ class String
   def multi_byte_ljust(width, padding = ' ')
     strings_bytesize = each_char.map { |string| string.bytesize == 1 ? 1 : 2 }.sum
     padding_count = [0, width - strings_bytesize].max
-    self.ljust(self.size + padding_count,padding)
+    ljust(size + padding_count, padding)
   end
 end
 
-WIDTH = 3
-directory = ARGV[0] || '.'
-files_text = Dir.glob('*', base: directory).sort
+options = {}
+options = { a: false }
+opt = OptionParser.new
+opt.on('-a', '--all', 'do not ignore entries starting with') { options[:a] = true }
+directory = opt.parse(ARGV).first || '.'
+files_text =
+  if options[:a] == true
+    Dir.glob('*', File::FNM_DOTMATCH, base: directory)
+  else
+    Dir.glob('*', base: directory).sort
+  end
 max_string_length = files_text.map(&:length).max
 files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
 files_text = align_slice_count(files_text, WIDTH)
