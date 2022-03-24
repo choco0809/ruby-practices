@@ -21,17 +21,18 @@ class String
   end
 end
 
-options = {}
-options = { a: false }
+# lsオプションによってfiles_textを生成
+def create_files_text(directory, ls_options)
+  ls_texts = ls_options[:a] == true ? Dir.glob('*', File::FNM_DOTMATCH, base: directory) : Dir.glob('*', base: directory)
+  ls_options[:r] == true ? ls_texts.reverse : ls_texts
+end
+
+options = { a: false, r: false }
 opt = OptionParser.new
 opt.on('-a', '--all', 'do not ignore entries starting with') { options[:a] = true }
+opt.on('-r', '--reverse', 'reverse order while sorting') { options[:r] = true }
 directory = opt.parse(ARGV).first || '.'
-files_text =
-  if options[:a] == true
-    Dir.glob('*', File::FNM_DOTMATCH, base: directory)
-  else
-    Dir.glob('*', base: directory).sort
-  end
+files_text = create_files_text(directory, **options)
 max_string_length = files_text.map(&:length).max
 files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
 files_text = align_slice_count(files_text, WIDTH)
