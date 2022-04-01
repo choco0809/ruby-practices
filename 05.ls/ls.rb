@@ -1,7 +1,41 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'etc'
+require 'date'
 WIDTH = 3
+
+# パーミッション種類
+def permission_type_list(permission_number)
+  permission_type = {
+    0 => '---', 1 => '--x', 2 => '-w-', 3 => '-wx',
+    4 => 'r--', 5 => 'r-x', 6 => 'rw-', 7 => 'rwx'
+  }
+  permission_type[permission_number]
+end
+
+def file_type_list(file_number)
+  files_type = {
+    1 => 'p', 2 => 'c', 4 => 'd', 6 => 'b',
+    10 => '-', 12 => 'l', 14 => 's'
+  }
+  files_type[file_number]
+end
+
+def get_permission_type(permission_numbers)
+  # パーミッションの種類を取得
+  permission_strings = []
+  permission_numbers[-3, 3].each_char do |permission_number|
+    permission_strings.push(permission_type_list(permission_number.to_i))
+  end
+  # ファイルの種類を判断
+  permission_strings.join +
+    if permission_numbers.length > 5
+      file_type_list(permission_numbers[0, 2].to_i)
+    else
+      file_type_list(permission_numbers[0, 1].to_i)
+    end
+end
 
 # 配列内の要素数をslice_countの個数に統一する
 def align_slice_count(array, slice_count)
@@ -23,32 +57,70 @@ end
 
 # lsオプションによってfiles_textを生成
 def create_files_text(directory, ls_options)
-  ls_texts = ls_options[:a] == true ? Dir.glob('*', File::FNM_DOTMATCH, base: directory) : Dir.glob('*', base: directory)
+  ls_texts =
+    if ls_options[:a] == true
+      Dir.glob('*', File::FNM_DOTMATCH, base: directory)
+    else
+      Dir.glob('*', base: directory)
+    end
   ls_options[:r] == true ? ls_texts.reverse : ls_texts
 end
 
-options = { a: false, r: false }
+options = { a: false, r: false, l: false }
 opt = OptionParser.new
 opt.on('-a', '--all', 'do not ignore entries starting with') { options[:a] = true }
 opt.on('-r', '--reverse', 'reverse order while sorting') { options[:r] = true }
+opt.on('-l', '詳細リスト形式を表示する') { options[:l] = true }
 directory = opt.parse(ARGV).first || '.'
 files_text = create_files_text(directory, **options)
-max_string_length = files_text.map(&:length).max
-files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
-files_text = align_slice_count(files_text, WIDTH)
-remainder_of_zero = (files_text.size % WIDTH).zero?
-slice_element_count =
-  if remainder_of_zero
-    files_text.size / WIDTH
+if options[:l] == false
+  max_string_length = files_text.map(&:length).max
+  files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
+  files_text = align_slice_count(files_text, WIDTH)
+  remainder_of_zero = (files_text.size % WIDTH).zero?
+  slice_element_count =
+    if remainder_of_zero
+      files_text.size / WIDTH
+    else
+      files_text.size / WIDTH + 1
+    end
+  files =
+    files_text.each_slice(slice_element_count).map do |slice_files|
+      align_slice_count(slice_files, slice_element_count)
+    end
+  if files_text.size <= slice_element_count
+    puts files_text.join("\t")
   else
-    files_text.size / WIDTH + 1
+    files.transpose.each { |file| puts file.join("\t") }
   end
-files =
-  files_text.each_slice(slice_element_count).map do |slice_files|
-    align_slice_count(slice_files, slice_element_count)
-  end
-if files_text.size <= slice_element_count
-  puts files_text.join("\t")
 else
-  files.transpose.each { |file| puts file.join("\t") }
+  files_info =
+    files_text.map do |file_text|
+      stat_file = File::Stat.new(File.expand_path(file_text, directory))
+      permission_string = get_permission_type(stat_file.mode.to_s(8))
+      {
+        file_name: file_text,
+        block_size: stat_file.blocks,
+        permission: permission_string,
+        hard_link: stat_file.nlink.to_s,
+        owner_name: Etc.getpwuid(stat_file.uid).name,
+        group_name: Etc.getgrgid(stat_file.gid).name,
+        file_size: stat_file.size.to_s,
+        time_stamp: stat_file.mtime.strftime('%_m %_d %H:%M')
+      }
+    end
+  # 各種値の最大値を取得
+  block_size_total = files_info.inject(0) { |sum, hash| sum + hash[:block_size] }
+  hard_link_max = files_info.max_by { |v| v[:hard_link].length }
+  file_size_max = files_info.max_by { |v| v[:file_size].length }
+  puts "total #{block_size_total}"
+  files_info.each do |file_info|
+    puts "#{file_info[:permission]}  "\
+          "#{file_info[:hard_link].rjust(hard_link_max[:hard_link].length)} "\
+          "#{file_info[:owner_name]}  "\
+          "#{file_info[:group_name]}  "\
+          "#{file_info[:file_size].rjust(file_size_max[:file_size].length)} "\
+          "#{file_info[:time_stamp]} "\
+          "#{file_info[:file_name]}"
+  end
 end
