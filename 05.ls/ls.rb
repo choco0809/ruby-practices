@@ -2,7 +2,6 @@
 
 require 'optparse'
 require 'etc'
-require 'date'
 WIDTH = 3
 
 # パーミッション種類
