@@ -57,12 +57,66 @@ end
 # lsオプションによってfiles_textを生成
 def create_files_text(directory, ls_options)
   ls_texts =
-    if ls_options[:a] == true
+    if ls_options[:a]
       Dir.glob('*', File::FNM_DOTMATCH, base: directory)
     else
       Dir.glob('*', base: directory)
     end
   ls_options[:r] == true ? ls_texts.reverse : ls_texts
+end
+
+def get_files_info_l_option(files_text, directory)
+  files_text.map do |file_text|
+    stat_file = File::Stat.new(File.expand_path(file_text, directory))
+    permission_string = get_permission_type(stat_file.mode.to_s(8))
+    {
+      file_name: file_text,
+      block_size: stat_file.blocks,
+      permission: permission_string,
+      hard_link: stat_file.nlink.to_s,
+      owner_name: Etc.getpwuid(stat_file.uid).name,
+      group_name: Etc.getgrgid(stat_file.gid).name,
+      file_size: stat_file.size.to_s,
+      time_stamp: stat_file.mtime.strftime('%_m %_d %H:%M')
+    }
+  end
+end
+
+def print_ls_l_option(files_info)
+  block_size_total = files_info.sum { |hash| hash[:block_size] }
+  # 各種値の最大値を取得
+  hard_link_max = files_info.map { |v| v[:hard_link].length }.max
+  file_size_max = files_info.map { |v| v[:file_size].length }.max
+  puts "total #{block_size_total}"
+  files_info.each do |file_info|
+    puts "#{file_info[:permission]}  "\
+          "#{file_info[:hard_link].rjust(hard_link_max)} "\
+          "#{file_info[:owner_name]}  "\
+          "#{file_info[:group_name]}  "\
+          "#{file_info[:file_size].rjust(file_size_max)} "\
+          "#{file_info[:time_stamp]} "\
+          "#{file_info[:file_name]}"
+  end
+end
+
+def print_ls(files_text, slice_element_count)
+  files =
+    files_text.each_slice(slice_element_count).map do |slice_files|
+      align_slice_count(slice_files, slice_element_count)
+    end
+  if files_text.size <= slice_element_count
+    puts files.join("\t")
+  else
+    files.transpose.each { |file| puts file.join("\t") }
+  end
+end
+
+def get_slice_element_count(files_text)
+  max_string_length = files_text.map(&:length).max
+  files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
+  files_text = align_slice_count(files_text, WIDTH)
+  remainder_of_zero = (files_text.size % WIDTH).zero?
+  remainder_of_zero ? files_text.size / WIDTH : files_text.size / WIDTH + 1
 end
 
 options = { a: false, r: false, l: false }
@@ -72,54 +126,10 @@ opt.on('-r', '--reverse', 'reverse order while sorting') { options[:r] = true }
 opt.on('-l', '詳細リスト形式を表示する') { options[:l] = true }
 directory = opt.parse(ARGV).first || '.'
 files_text = create_files_text(directory, **options)
-if options[:l] == false
-  max_string_length = files_text.map(&:length).max
-  files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
-  files_text = align_slice_count(files_text, WIDTH)
-  remainder_of_zero = (files_text.size % WIDTH).zero?
-  slice_element_count =
-    if remainder_of_zero
-      files_text.size / WIDTH
-    else
-      files_text.size / WIDTH + 1
-    end
-  files =
-    files_text.each_slice(slice_element_count).map do |slice_files|
-      align_slice_count(slice_files, slice_element_count)
-    end
-  if files_text.size <= slice_element_count
-    puts files_text.join("\t")
-  else
-    files.transpose.each { |file| puts file.join("\t") }
-  end
+if options[:l]
+  files_info = get_files_info_l_option(files_text, directory)
+  print_ls_l_option(files_info)
 else
-  files_info =
-    files_text.map do |file_text|
-      stat_file = File::Stat.new(File.expand_path(file_text, directory))
-      permission_string = get_permission_type(stat_file.mode.to_s(8))
-      {
-        file_name: file_text,
-        block_size: stat_file.blocks,
-        permission: permission_string,
-        hard_link: stat_file.nlink.to_s,
-        owner_name: Etc.getpwuid(stat_file.uid).name,
-        group_name: Etc.getgrgid(stat_file.gid).name,
-        file_size: stat_file.size.to_s,
-        time_stamp: stat_file.mtime.strftime('%_m %_d %H:%M')
-      }
-    end
-  # 各種値の最大値を取得
-  block_size_total = files_info.inject(0) { |sum, hash| sum + hash[:block_size] }
-  hard_link_max = files_info.max_by { |v| v[:hard_link].length }
-  file_size_max = files_info.max_by { |v| v[:file_size].length }
-  puts "total #{block_size_total}"
-  files_info.each do |file_info|
-    puts "#{file_info[:permission]}  "\
-          "#{file_info[:hard_link].rjust(hard_link_max[:hard_link].length)} "\
-          "#{file_info[:owner_name]}  "\
-          "#{file_info[:group_name]}  "\
-          "#{file_info[:file_size].rjust(file_size_max[:file_size].length)} "\
-          "#{file_info[:time_stamp]} "\
-          "#{file_info[:file_name]}"
-  end
+  slice_element_count = get_slice_element_count(files_text)
+  print_ls(files_text, slice_element_count)
 end
