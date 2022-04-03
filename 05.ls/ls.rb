@@ -4,45 +4,15 @@ require 'optparse'
 require 'etc'
 WIDTH = 3
 
-# パーミッション種類
-def permission_type_list(permission_number)
-  permission_type = {
-    0 => '---', 1 => '--x', 2 => '-w-', 3 => '-wx',
-    4 => 'r--', 5 => 'r-x', 6 => 'rw-', 7 => 'rwx'
-  }
-  permission_type[permission_number]
-end
-
-def file_type_list(file_number)
-  files_type = {
-    1 => 'p', 2 => 'c', 4 => 'd', 6 => 'b',
-    10 => '-', 12 => 'l', 14 => 's'
-  }
-  files_type[file_number]
-end
-
-def get_permission_type(permission_numbers)
-  # パーミッションの種類を取得
-  permission_strings = []
-  permission_numbers[-3, 3].each_char do |permission_number|
-    permission_strings.push(permission_type_list(permission_number.to_i))
-  end
-  # ファイルの種類を判断
-  permission_strings.join +
-    if permission_numbers.length > 5
-      file_type_list(permission_numbers[0, 2].to_i)
+# オプション情報からファイルの一覧を作成
+def create_files_text(directory, ls_options)
+  ls_texts =
+    if ls_options[:a]
+      Dir.glob('*', File::FNM_DOTMATCH, base: directory)
     else
-      file_type_list(permission_numbers[0, 1].to_i)
+      Dir.glob('*', base: directory)
     end
-end
-
-# 配列内の要素数をslice_countの個数に統一する
-def align_slice_count(array, slice_count)
-  if array.size < slice_count
-    array.fill(nil, array.size, slice_count - array.size)
-  else
-    array
-  end
+  ls_options[:r] ? ls_texts.reverse : ls_texts
 end
 
 # マルチバイトに対応したljust
@@ -54,25 +24,33 @@ class String
   end
 end
 
-# lsオプションによってfiles_textを生成
-def create_files_text(directory, ls_options)
-  ls_texts =
-    if ls_options[:a]
-      Dir.glob('*', File::FNM_DOTMATCH, base: directory)
-    else
-      Dir.glob('*', base: directory)
-    end
-  ls_options[:r] == true ? ls_texts.reverse : ls_texts
+# 表示するファイル数（横幅）を取得
+def get_slice_element_count(files_text)
+  max_string_length = files_text.map(&:length).max
+  files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
+  files_text = align_slice_count(files_text, WIDTH)
+  remainder_of_zero = (files_text.size % WIDTH).zero?
+  remainder_of_zero ? 1 : files_text.size / WIDTH + 1
 end
 
-def get_files_info_l_option(files_text, directory)
+# 配列内の要素数をslice_countの値に統一する
+def align_slice_count(array, slice_count)
+  if array.size < slice_count
+    array.fill(nil, array.size, slice_count - array.size)
+  else
+    array
+  end
+end
+
+# ファイルの情報を取得
+def get_files_info(files_text, directory)
   files_text.map do |file_text|
     stat_file = File::Stat.new(File.expand_path(file_text, directory))
-    permission_string = get_permission_type(stat_file.mode.to_s(8))
+    file_mode_string = get_file_mode(stat_file.mode.to_s(8))
     {
       file_name: file_text,
       block_size: stat_file.blocks,
-      permission: permission_string,
+      permission: file_mode_string,
       hard_link: stat_file.nlink.to_s,
       owner_name: Etc.getpwuid(stat_file.uid).name,
       group_name: Etc.getgrgid(stat_file.gid).name,
@@ -82,7 +60,53 @@ def get_files_info_l_option(files_text, directory)
   end
 end
 
-def print_ls_l_option(files_info)
+# パーミッション種類
+def permission_type_list(permission_number)
+  permission_type = {
+    0 => '---', 1 => '--x', 2 => '-w-', 3 => '-wx',
+    4 => 'r--', 5 => 'r-x', 6 => 'rw-', 7 => 'rwx'
+  }
+  permission_type[permission_number]
+end
+
+# ファイル種類
+def file_type_list(file_number)
+  files_type = {
+    1 => 'p', 2 => 'c', 4 => 'd', 6 => 'b',
+    10 => '-', 12 => 'l', 14 => 's'
+  }
+  files_type[file_number]
+end
+
+# ファイルモード取得
+def get_file_mode(files_mode)
+  # パーミッションの種類を取得
+  permission_strings = []
+  files_mode[-3, 3].each_char do |file_mode|
+    permission_strings.push(permission_type_list(file_mode.to_i))
+  end
+  # ファイルの種類を判断
+  file_type = files_mode.length > 5 ? file_type_list(files_mode[0, 2].to_i) : file_type_list(files_mode[0, 1].to_i)
+  file_type + permission_strings.join
+end
+
+# lオプション指定なしの場合の出力
+def print_ls(files_text)
+  slice_element_count = get_slice_element_count(files_text)
+  files =
+    files_text.each_slice(slice_element_count).map do |slice_files|
+      align_slice_count(slice_files, slice_element_count)
+    end
+  if slice_element_count == 1
+    puts files.join("\t")
+  else
+    files.transpose.each { |file| puts file.join("\t") }
+  end
+end
+
+# lオプション指定ありの場合の出力
+def print_ls_l_option(files_text, directory)
+  files_info = get_files_info(files_text, directory)
   block_size_total = files_info.sum { |hash| hash[:block_size] }
   # 各種値の最大値を取得
   hard_link_max = files_info.map { |v| v[:hard_link].length }.max
@@ -99,37 +123,17 @@ def print_ls_l_option(files_info)
   end
 end
 
-def print_ls(files_text, slice_element_count)
-  files =
-    files_text.each_slice(slice_element_count).map do |slice_files|
-      align_slice_count(slice_files, slice_element_count)
-    end
-  if files_text.size <= slice_element_count
-    puts files.join("\t")
-  else
-    files.transpose.each { |file| puts file.join("\t") }
-  end
-end
-
-def get_slice_element_count(files_text)
-  max_string_length = files_text.map(&:length).max
-  files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
-  files_text = align_slice_count(files_text, WIDTH)
-  remainder_of_zero = (files_text.size % WIDTH).zero?
-  remainder_of_zero ? files_text.size / WIDTH : files_text.size / WIDTH + 1
-end
-
+# オプションの初期化
 options = { a: false, r: false, l: false }
 opt = OptionParser.new
 opt.on('-a', '--all', 'do not ignore entries starting with') { options[:a] = true }
 opt.on('-r', '--reverse', 'reverse order while sorting') { options[:r] = true }
 opt.on('-l', '詳細リスト形式を表示する') { options[:l] = true }
+# 作業ディレクトリの設定
 directory = opt.parse(ARGV).first || '.'
 files_text = create_files_text(directory, **options)
 if options[:l]
-  files_info = get_files_info_l_option(files_text, directory)
-  print_ls_l_option(files_info)
+  print_ls_l_option(files_text, directory)
 else
-  slice_element_count = get_slice_element_count(files_text)
-  print_ls(files_text, slice_element_count)
+  print_ls(files_text)
 end
