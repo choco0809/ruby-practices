@@ -25,16 +25,20 @@ def process_has_argument_flg(input_contents, options)
   total_summary = []
   input_contents.each do |input_content|
     if FileTest.directory? input_content
-      puts 'wc: wc_test: read: Is a directory'
+      puts "wc: #{input_content}: read: Is a directory"
       files_list = { name: nil, size: 0, word_count: 0, line_count: 0 }
       total_summary.push(files_list)
-    else
+    elsif FileTest.file? input_content
       full_path = File.expand_path(input_content)
       stat_file = File::Stat.new(full_path)
       read_contents = IO.readlines(full_path).join
       files_list = create_files_list(input_content, stat_file, read_contents, read_contents)
       total_summary.push(files_list)
       puts_wc(files_list, **options)
+    else
+      puts "wc: #{input_content}: open: No such file or directory"
+      files_list = { name: nil, size: 0, word_count: 0, line_count: 0 }
+      total_summary.push(files_list)
     end
   end
   total_summary.count > 1 ? puts_total_summary(total_summary, **options) : nil
