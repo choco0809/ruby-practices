@@ -30,7 +30,7 @@ def get_slice_element_count(files_text)
   files_text.map! { |file_text| file_text.multi_byte_ljust(max_string_length) }
   files_text = align_slice_count(files_text, WIDTH)
   remainder_of_zero = (files_text.size % WIDTH).zero?
-  remainder_of_zero ? 1 : files_text.size / WIDTH + 1
+  remainder_of_zero ? files_text.size / WIDTH  : files_text.size / WIDTH + 1
 end
 
 # 配列内の要素数をslice_countの値に統一する
