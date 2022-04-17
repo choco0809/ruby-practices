@@ -9,24 +9,16 @@ def main
   options = { l: false }
   opt = OptionParser.new
   opt.on('-l', '入力ファイルの行数を標準出力に出力します。改行コードの数を行数とします。') { options[:l] = true }
-  input_contents =
-    if opt.parse(ARGV).first.nil?
-      exsits_argument = false
-      $stdin.read
-    else
-      exsits_argument = true
-      opt.parse(ARGV)
-    end
-  if exsits_argument
-    not_stdin_process(input_contents, **options)
+  if (arguments = opt.parse(ARGV)) && arguments.size.positive?
+    process_not_stdin(arguments, **options)
   else
-    stdin_process(input_contents, **options)
+    process_stdin($stdin.read, **options)
   end
 end
 
-def not_stdin_process(input_contents, options)
+def process_not_stdin(file_paths, options)
   total_summary = []
-  input_contents.each do |input_content|
+  file_paths.each do |input_content|
     if FileTest.directory? input_content
       puts "wc: #{input_content}: read: Is a directory"
       files_list = { name: nil, size: 0, word_count: 0, line_count: 0 }
@@ -46,9 +38,9 @@ def not_stdin_process(input_contents, options)
   total_summary.count > 1 ? puts_total_summary(total_summary, **options) : nil
 end
 
-def stdin_process(input_contents, options)
-  files_list = create_files_list(nil, input_contents)
-  puts_wc(files_list, **options)
+def process_stdin(stdin_strings, options)
+  stdin_list = create_files_list(nil, stdin_strings)
+  puts_wc(stdin_list, **options)
 end
 
 # files_listを作成する
