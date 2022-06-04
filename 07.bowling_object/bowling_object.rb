@@ -2,10 +2,12 @@
 
 require_relative 'game'
 
-def main
-  game1 = Game.new(ARGV[0])
+def main(scores)
+  game1 = Game.new(scores)
   game1.total_score
-  puts game1.game_score
+  game1.game_score
 end
 
-main
+if __FILE__ == $PROGRAM_NAME # rubocop:disable Style/IfUnlessModifier
+  puts main(ARGV[0])
+end
