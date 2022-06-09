@@ -8,18 +8,28 @@ class Frame
   end
 
   def score(index)
-    strike = (@frame[0] == 10)
-    spare = (!strike && @frame.sum == 10)
-    last_frame = (@frame if index > 8)
-    if last_frame
-      @frame.sum + @next_frame.sum + @after_next_frame.sum
-    elsif strike
-      double = (@next_frame[0] == 10)
-      double ? @after_next_frame[0] + 20 : @next_frame.sum + 10
-    elsif spare
-      @next_frame[0] + 10
+    if index > 8
+      last_frame
+    elsif @frame.sum == 10
+      spare + strike
     else
       @frame.sum
+    end
+  end
+
+  def last_frame
+    [@frame, @next_frame, @after_next_frame].flatten.sum
+  end
+
+  def spare
+    @frame[0] != 10 ? @next_frame[0] + 10 : 0
+  end
+
+  def strike
+    if @frame[0] == 10
+      @next_frame[0] == 10 ? @after_next_frame[0] + 20 : @next_frame.sum + 10
+    else
+      0
     end
   end
 end
