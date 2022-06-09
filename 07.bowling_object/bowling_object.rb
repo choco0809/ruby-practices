@@ -5,7 +5,6 @@ require_relative 'game'
 def main(scores)
   game1 = Game.new(scores)
   game1.total_score
-  game1.game_score
 end
 
 if __FILE__ == $PROGRAM_NAME # rubocop:disable Style/IfUnlessModifier
