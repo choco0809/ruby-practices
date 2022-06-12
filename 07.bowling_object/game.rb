@@ -15,7 +15,7 @@ class Game
 
   def convert_number_scores
     @scores.flat_map { |score| score == 'X' ? [10, 0] : score.to_i }
-           .each_slice(2).to_a { |number_score| number_score }
+           .each_slice(2).to_a
   end
 
   def convert_frames_shot(number_scores)
