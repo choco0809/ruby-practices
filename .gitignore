@@ -121,3 +121,4 @@ $RECYCLE.BIN/
 
 # RubyMine プロジェクト管理フォルダのため対象外とする
 /.idea/*
+/07.bowling_object/.idea/*
