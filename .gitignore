@@ -118,3 +118,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# RubyMine プロジェクト管理フォルダのため対象外とする
+/.idea/*
