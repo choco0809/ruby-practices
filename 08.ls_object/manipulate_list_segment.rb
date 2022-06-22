@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class ManipulateListSegment
-
   def initialize(target_directory, options)
     @target_directory = target_directory
     @options = options
@@ -25,11 +24,6 @@ class ManipulateListSegment
   end
 
   def add_dummy(array, row_count)
-    if array.size < row_count
-      array.fill(nil, array.size, row_count - array.size)
-    else
-      array
-    end
+    array.size < row_count ? array.fill(nil, array.size, row_count - array.size) : array
   end
-
 end
