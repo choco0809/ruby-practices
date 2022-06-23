@@ -47,5 +47,4 @@ class LsObjectTest < Minitest::Test
     TEXT
     assert_equal expected_string, main('ls_test', @options)
   end
-
 end
