@@ -9,6 +9,27 @@ class LongFormat
     @options = options
   end
 
+  def show_list_segments
+    manipulate_list_segment = ManipulateListSegment.new(@target_directory, **@options)
+    list_segments = manipulate_list_segment.create_list_segments
+    files_info = fetch_files_info(list_segments)
+    block_size_total = files_info.sum { |hash| hash[:block_size] }
+    hard_link_max = files_info.map { |v| v[:hard_link].length }.max
+    file_size_max = files_info.map { |v| v[:file_size].length }.max
+    "total #{block_size_total}\n" +
+      files_info.map do |file_info|
+        "#{file_info[:permission]}  "\
+        "#{file_info[:hard_link].rjust(hard_link_max)} "\
+        "#{file_info[:owner_name]}  "\
+        "#{file_info[:group_name]}  "\
+        "#{file_info[:file_size].rjust(file_size_max)} "\
+        "#{file_info[:time_stamp]} "\
+        "#{file_info[:file_name]}"
+      end.join("\n")
+  end
+
+  private
+
   # パーミッション種類
   def permission_type_list(permission_number)
     permission_type = {
@@ -59,24 +80,5 @@ class LongFormat
         time_stamp: stat_file.mtime.strftime('%_m %_d %H:%M')
       }
     end
-  end
-
-  def show_list_segments
-    manipulate_list_segment = ManipulateListSegment.new(@target_directory, **@options)
-    list_segments = manipulate_list_segment.create_list_segments
-    files_info = fetch_files_info(list_segments)
-    block_size_total = files_info.sum { |hash| hash[:block_size] }
-    hard_link_max = files_info.map { |v| v[:hard_link].length }.max
-    file_size_max = files_info.map { |v| v[:file_size].length }.max
-    "total #{block_size_total}\n" +
-      files_info.map do |file_info|
-        "#{file_info[:permission]}  "\
-        "#{file_info[:hard_link].rjust(hard_link_max)} "\
-        "#{file_info[:owner_name]}  "\
-        "#{file_info[:group_name]}  "\
-        "#{file_info[:file_size].rjust(file_size_max)} "\
-        "#{file_info[:time_stamp]} "\
-        "#{file_info[:file_name]}"
-      end.join("\n")
   end
 end
