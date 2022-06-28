@@ -9,7 +9,7 @@ class ShortFormat
     @columns = columns
   end
 
-  def show_list_segments
+  def list_segments
     manipulate_list_segment = ManipulateListSegment.new(@target_directory, **@options)
     list_segments = manipulate_list_segment.create_list_segments
     max_length = list_segments.map(&:length).max

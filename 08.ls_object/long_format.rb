@@ -9,7 +9,7 @@ class LongFormat
     @options = options
   end
 
-  def show_list_segments
+  def list_segments
     manipulate_list_segment = ManipulateListSegment.new(@target_directory, **@options)
     list_segments = manipulate_list_segment.create_list_segments
     files_info = fetch_files_info(list_segments)

@@ -8,13 +8,13 @@ require_relative 'long_format'
 COLUMNS = 3
 
 def main(target_directory, options)
-  if options[:l]
-    long_format = LongFormat.new(target_directory, **options)
-    long_format.show_list_segments
-  else
-    short_format = ShortFormat.new(target_directory, COLUMNS, **options)
-    short_format.show_list_segments
-  end
+  format =
+    if options[:l]
+      LongFormat.new(target_directory, **options)
+    else
+      ShortFormat.new(target_directory, COLUMNS, **options)
+    end
+  format.list_segments
 end
 
 if __FILE__ == $PROGRAM_NAME
