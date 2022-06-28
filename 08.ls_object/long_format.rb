@@ -1,17 +1,16 @@
 # frozen_string_literal: true
 
 require 'etc'
-require_relative 'manipulate_list_segment'
+require_relative 'short_format'
 
-class LongFormat
+class LongFormat < ShortFormat
   def initialize(target_directory, options)
     @target_directory = target_directory
     @options = options
   end
 
   def list_segments
-    manipulate_list_segment = ManipulateListSegment.new(@target_directory, **@options)
-    list_segments = manipulate_list_segment.create_list_segments
+    list_segments = create_list_segments(@target_directory, **@options)
     files_info = fetch_files_info(list_segments)
     block_size_total = files_info.sum { |hash| hash[:block_size] }
     hard_link_max = files_info.map { |v| v[:hard_link].length }.max
